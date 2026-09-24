@@ -30,6 +30,22 @@ jobs:
       # Referencia conocida-buena de Apple. Si aquí NO se detectan interstitials,
       # la sonda está mal o AVFoundation no los ejecuta en este entorno, y
       # cualquier medida posterior sobre otro stream no valdría nada.
+      # Distingue "no se alcanza la URL" de "se alcanza pero AVFoundation la
+      # rechaza". Sin esto, un fallo de red y un fallo de manifiesto son
+      # indistinguibles en el resultado de la sonda.
+      - name: Diagnóstico de red
+        continue-on-error: true
+        run: |
+          U="${{ inputs.url || 'https://devstreaming-cdn.apple.com/videos/streaming/examples/interstitial-sample/mvp_interstitial_sample.m3u8' }}"
+          echo "URL: $U"
+          HOST=$(echo "$U" | sed -E 's#^[a-z]+://([^/:]+).*#\1#')
+          echo "--- DNS ---";  dig +short "$HOST" || true
+          dig +short AAAA "$HOST" || true
+          echo "--- HTTP ---"
+          curl -sS -o /dev/null -m 20 -w 'codigo=%{http_code} tipo=%{content_type} tiempo=%{time_total}s\n' "$U" || echo "curl falló"
+          echo "--- primeras lineas ---"
+          curl -sS -m 20 "$U" | head -8 || true
+
       - name: Sondear el stream de referencia de Apple
         run: |
           ./sgai-probe \
