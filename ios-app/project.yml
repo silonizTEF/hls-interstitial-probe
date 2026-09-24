@@ -1,0 +1,19 @@
+name: SGAITest
+options:
+  bundleIdPrefix: com.example.sgai
+  deploymentTarget:
+    iOS: '17.0'
+targets:
+  SGAITest:
+    type: application
+    platform: iOS
+    sources: [Sources]
+    info:
+      path: Info.plist
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.example.sgai.SGAITest
+        GENERATE_INFOPLIST_FILE: NO
+        INFOPLIST_FILE: ios-app/Info.plist
+        TARGETED_DEVICE_FAMILY: '1,2'
+        CODE_SIGNING_ALLOWED: NO

@@ -51,3 +51,27 @@ jobs:
           ./sgai-probe \
             "${{ inputs.url || 'https://devstreaming-cdn.apple.com/videos/streaming/examples/interstitial-sample/mvp_interstitial_sample.m3u8' }}" \
             "${{ inputs.seconds || '100' }}"
+
+  # Compila la app de iOS. No puede ejecutarse en un iPhone desde aquí, pero al
+  # menos garantiza que el código compila: se escribió en Linux, sin Xcode, y
+  # un error tonto de compilación solo se descubriría al abrirla en un Mac.
+  build-ios-app:
+    runs-on: macos-15
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Instalar XcodeGen
+        run: brew install xcodegen
+
+      - name: Generar el proyecto
+        working-directory: ios-app
+        run: xcodegen generate
+
+      - name: Compilar para el simulador
+        working-directory: ios-app
+        run: |
+          xcodebuild -project SGAITest.xcodeproj -scheme SGAITest \
+            -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
+            -configuration Debug CODE_SIGNING_ALLOWED=NO build \
+            | tail -40
