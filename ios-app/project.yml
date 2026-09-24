@@ -8,12 +8,11 @@ targets:
     type: application
     platform: iOS
     sources: [Sources]
-    info:
-      path: Info.plist
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.example.sgai.SGAITest
         GENERATE_INFOPLIST_FILE: NO
-        INFOPLIST_FILE: ios-app/Info.plist
+        # Relativa al directorio del proyecto, que ya es ios-app/.
+        INFOPLIST_FILE: Info.plist
         TARGETED_DEVICE_FAMILY: '1,2'
         CODE_SIGNING_ALLOWED: NO
