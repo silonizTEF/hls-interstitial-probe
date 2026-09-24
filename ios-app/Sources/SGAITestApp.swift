@@ -1,7 +1,8 @@
 //  PoC SGAI — probador con el reproductor NATIVO de iOS.
 //
-//  Pensado para SWIFT PLAYGROUNDS EN EL PROPIO IPHONE: no hace falta Mac ni
-//  Xcode. Es un único fichero con el punto de entrada incluido.
+//  Proyecto de Xcode generado con XcodeGen (ios-app/project.yml). La compilación
+//  se verifica en CI sobre un runner macOS, así que el código no es una promesa
+//  sin comprobar.
 //
 //  Por qué hace falta: Safari no ejecuta HLS Interstitials — comprobado contra
 //  el stream de referencia de Apple, que en el dispositivo reproduce sólo el
@@ -12,9 +13,8 @@
 //  es la traza que no se ve desde fuera: distingue "el player no reconoce el
 //  DATERANGE" de "lo reconoce pero no lo ejecuta".
 //
-//  IMPORTANTE: usa una URL **https**. Swift Playgrounds no deja editar el
-//  Info.plist, así que no se puede autorizar HTTP en claro (ATS lo bloquea).
-//  El reenvío de puertos PÚBLICO de VS Code da una URL https directamente.
+//  HTTP en claro vale: el Info.plist del proyecto lleva NSAllowsArbitraryLoads,
+//  así que ATS no bloquea la conexión al servidor del PoC. No hace falta HTTPS.
 
 import SwiftUI
 import AVKit
@@ -28,7 +28,7 @@ struct SGAITestApp: App {
 }
 
 struct ContentView: View {
-    @State private var urlText = "https://CAMBIA-ESTO/master.m3u8?profile=replace"
+    @State private var urlText = "http://CAMBIA-ESTO:8081/master.m3u8?profile=replace"
     @StateObject private var model = PlayerModel()
 
     var body: some View {

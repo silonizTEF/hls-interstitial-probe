@@ -12,10 +12,21 @@ Interstitial*): en un iPhone con iOS 26 dura 1m38s — el contenido primario sol
 en vez de los 2m16s que duraría con sus tres interstitials insertados. Apple lo
 documenta: *"If Interstitials are not supported, only primary content is played"*.
 
-Son una funcionalidad de **AVFoundation**, y probarla requiere un Mac o un iPad
-(Swift Playgrounds es solo para iPad). Este repo evita ambos: la sonda se compila
-y ejecuta en un **runner macOS de GitHub Actions**, que es gratis en repositorios
-públicos.
+Son una funcionalidad de **AVFoundation**. Probarla en un dispositivo requiere un
+Mac con Xcode; Swift Playgrounds no sirve como atajo porque **sólo existe para
+iPad** (verificado en `supportedDevices` de la App Store: ni un iPhone en la
+lista). Este repo evita el Mac para lo que importa: la sonda se compila y ejecuta
+en un **runner macOS de GitHub Actions**, gratis en repositorios públicos.
+
+## Contenido
+
+| | |
+|---|---|
+| `sgai-probe.swift` | sonda headless de AVFoundation, se ejecuta en CI |
+| `ios-app/` | app mínima de iOS con AVPlayer. Se verifica que **compila** en CI; abrirla en un dispositivo sí necesita un Mac |
+
+El servidor puede ir por **HTTP en claro**: el `Info.plist` de la app lleva
+`NSAllowsArbitraryLoads`, así que ATS no la bloquea. No hace falta HTTPS.
 
 ## Qué mide
 
