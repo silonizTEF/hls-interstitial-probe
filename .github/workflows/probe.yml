@@ -68,10 +68,23 @@ jobs:
         working-directory: ios-app
         run: xcodegen generate
 
+      # `set -o pipefail` NO es opcional aquí: sin él, el estado de salida de la
+      # tubería es el de `tail`, así que un xcodebuild fallido daba "success" y
+      # el paso pasaba en verde sin haber compilado nada.
       - name: Compilar para el simulador
         working-directory: ios-app
         run: |
+          set -o pipefail
           xcodebuild -project SGAITest.xcodeproj -scheme SGAITest \
             -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
-            -configuration Debug CODE_SIGNING_ALLOWED=NO build \
-            | tail -40
+            -configuration Debug CODE_SIGNING_ALLOWED=NO build 2>&1 \
+            | grep -vE '^\s*$' | tail -60
+
+      - name: Confirmar que el .app existe
+        working-directory: ios-app
+        run: |
+          set -o pipefail
+          APP=$(find ~/Library/Developer/Xcode/DerivedData -name 'SGAITest.app' -type d | head -1)
+          test -n "$APP" || { echo "no se generó el .app"; exit 1; }
+          echo "generado: $APP"
+          ls -la "$APP"
