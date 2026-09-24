@@ -1,0 +1,37 @@
+# Ejecuta la sonda sobre un runner macOS: es la única forma de probar
+# AVFoundation sin tener un Mac ni un iPad.
+name: Sonda AVFoundation
+
+on:
+  workflow_dispatch:
+    inputs:
+      url:
+        description: URL del master.m3u8 a sondear
+        default: https://devstreaming-cdn.apple.com/videos/streaming/examples/interstitial-sample/mvp_interstitial_sample.m3u8
+      seconds:
+        description: Duración del sondeo en segundos
+        default: '100'
+  push:
+    branches: [main]
+
+jobs:
+  probe:
+    runs-on: macos-15
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Versiones
+        run: swift --version && sw_vers
+
+      - name: Compilar la sonda
+        run: swiftc -O sgai-probe.swift -o sgai-probe
+
+      # Referencia conocida-buena de Apple. Si aquí NO se detectan interstitials,
+      # la sonda está mal o AVFoundation no los ejecuta en este entorno, y
+      # cualquier medida posterior sobre otro stream no valdría nada.
+      - name: Sondear el stream de referencia de Apple
+        run: |
+          ./sgai-probe \
+            "${{ inputs.url || 'https://devstreaming-cdn.apple.com/videos/streaming/examples/interstitial-sample/mvp_interstitial_sample.m3u8' }}" \
+            "${{ inputs.seconds || '100' }}"
