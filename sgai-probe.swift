@@ -33,6 +33,21 @@ var sawSchedule = false
 var sawInterstitialStart = false
 var scheduleMax = 0
 
+// Reenganche: en un reemplazo, el contenido primario tiene que retomar
+// X-RESUME-OFFSET segundos después de donde salió. Es LA medida que distingue
+// "ejecuta el interstitial" de "lo ejecuta bien": un player puede entrar en el
+// anuncio y volver al sitio equivocado, y desde el servidor eso no se ve.
+//
+// Mientras el interstitial está en curso el player primario se queda parado en
+// el punto de salida, así que basta con anotar su currentTime al entrar y al
+// volver.
+struct Break {
+    let id: String
+    let sale: Double
+    var vuelve: Double?
+}
+var breaks: [Break] = []
+
 nc.addObserver(forName: AVPlayerInterstitialEventMonitor.eventsDidChangeNotification,
                object: monitor, queue: .main) { _ in
     let events = monitor.events
@@ -47,11 +62,26 @@ nc.addObserver(forName: AVPlayerInterstitialEventMonitor.eventsDidChangeNotifica
 
 nc.addObserver(forName: AVPlayerInterstitialEventMonitor.currentEventDidChangeNotification,
                object: monitor, queue: .main) { _ in
+    let ahora = player.currentTime().seconds
     if let e = monitor.currentEvent {
         sawInterstitialStart = true
-        log("ENTRA en interstitial: \(e.identifier)")
+        breaks.append(Break(id: e.identifier, sale: ahora, vuelve: nil))
+        log("ENTRA en interstitial: \(e.identifier)  (primario en \(String(format: "%.2f", ahora)))")
     } else {
-        log("VUELVE al contenido primario")
+        // El primario tarda un instante en recolocarse tras el interstitial, así
+        // que se lee un poco después: leerlo aquí mismo da todavía el punto de
+        // salida y el reenganche saldría 0.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+            let vuelta = player.currentTime().seconds
+            if let i = breaks.lastIndex(where: { $0.vuelve == nil }) {
+                breaks[i].vuelve = vuelta
+                let d = vuelta - breaks[i].sale
+                log("VUELVE al contenido primario en \(String(format: "%.2f", vuelta))"
+                    + "  -> reenganche +\(String(format: "%.2f", d))s")
+            } else {
+                log("VUELVE al contenido primario en \(String(format: "%.2f", vuelta))")
+            }
+        }
     }
 }
 
@@ -85,11 +115,33 @@ RunLoop.main.run(until: Date().addingTimeInterval(seconds))
 timer.invalidate()
 statusObs?.invalidate()
 
+// Reenganche esperado, para poder juzgar sin mirar a ojo. Se pasa como tercer
+// argumento; 0 significa "no lo compruebes" (p.ej. con el stream de Apple, que
+// es aditivo).
+let esperado = args.count >= 4 ? (Double(args[3]) ?? 0) : 0
+
 print("")
 print("===== RESULTADO =====")
 print("AVFoundation parseó el DATERANGE : \(sawSchedule ? "SÍ" : "NO")  (máximo en agenda: \(scheduleMax))")
 print("Ejecutó algún interstitial       : \(sawInterstitialStart ? "SÍ" : "NO")")
+print("Interstitials ejecutados         : \(breaks.count)")
+
+var reenganchesOk = 0
+let completos = breaks.filter { $0.vuelve != nil }
+for b in completos {
+    let d = b.vuelve! - b.sale
+    let ok = esperado > 0 && abs(d - esperado) < 1.0
+    if ok { reenganchesOk += 1 }
+    print("  \(b.id): sale en \(String(format: "%.2f", b.sale))"
+        + " -> vuelve en \(String(format: "%.2f", b.vuelve!))"
+        + "  (+\(String(format: "%.2f", d))s)"
+        + (esperado > 0 ? (ok ? "  ok" : "  MAL, se esperaba +\(esperado)") : ""))
+}
+if esperado > 0 {
+    print("Reenganches correctos            : \(reenganchesOk)/\(completos.count)")
+}
 print("=====================")
 
-// Sale con error sólo si ni siquiera parseó: eso es el fallo duro.
+// Sale con error sólo si ni siquiera parseó: eso es el fallo duro. Lo demás se
+// interpreta leyendo, porque "no se ejecutó" puede ser legítimo según el stream.
 exit(sawSchedule ? 0 : 1)
