@@ -71,11 +71,18 @@ nc.addObserver(forName: AVPlayerInterstitialEventMonitor.currentEventDidChangeNo
         // El primario tarda un instante en recolocarse tras el interstitial, así
         // que se lee un poco después: leerlo aquí mismo da todavía el punto de
         // salida y el reenganche saldría 0.
+        //
+        // Pero esa espera hay que DESCONTARLA: durante ella la reproducción
+        // avanza al ritmo del reloj, y si no se resta el reenganche sale ~1 s
+        // largo. La primera versión de esto daba +17,0 s donde el player hacía
+        // +16,0 y lo marcaba como fallo del player.
+        let tEvento = Date()
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
             let vuelta = player.currentTime().seconds
+            let transcurrido = Date().timeIntervalSince(tEvento)
             if let i = breaks.lastIndex(where: { $0.vuelve == nil }) {
-                breaks[i].vuelve = vuelta
-                let d = vuelta - breaks[i].sale
+                breaks[i].vuelve = vuelta - transcurrido
+                let d = breaks[i].vuelve! - breaks[i].sale
                 log("VUELVE al contenido primario en \(String(format: "%.2f", vuelta))"
                     + "  -> reenganche +\(String(format: "%.2f", d))s")
             } else {
